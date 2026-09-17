@@ -1,3 +1,4 @@
+from datetime import datetime
 from fastapi import FastAPI, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import Optional, List
@@ -35,12 +36,24 @@ def create_advertisement(
 )
 def search_advertisements(
     title: Optional[str] = Query(None, description="Поиск по заголовку (частичное совпадение)"),
+    description: Optional[str] = Query(None, description="Поиск по описанию (частичное совпадение)"),
     author: Optional[str] = Query(None, description="Поиск по автору"),
     min_price: Optional[float] = Query(None, ge=0, description="Минимальная цена"),
     max_price: Optional[float] = Query(None, ge=0, description="Максимальная цена"),
+    created_from: Optional[datetime] = Query(None, description="Дата создания от (ISO 8601)"),
+    created_to: Optional[datetime] = Query(None, description="Дата создания до (ISO 8601)"),
     db: Session = Depends(get_db)
 ):
-    return crud.get_advertisements(db, title, author, min_price, max_price)
+    return crud.get_advertisements(
+        db,
+        title=title,
+        description=description,
+        author=author,
+        min_price=min_price,
+        max_price=max_price,
+        created_from=created_from,
+        created_to=created_to,
+    )
 
 
 @app.get(
