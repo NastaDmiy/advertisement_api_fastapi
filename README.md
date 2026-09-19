@@ -100,3 +100,21 @@ docker stop adv_api
 **Ответ:** `200 OK`
 
 Если не найдено — `404 Not Found`.
+
+### POST /login
+
+```json
+{
+  "username": "admin",
+  "password": "admin123"
+}
+```
+
+Ответ:
+```json
+{
+  "access_token": "eyJ...",
+  "token_type": "bearer",
+  "expires_in": 172800
+}
+```
