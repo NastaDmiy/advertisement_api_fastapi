@@ -1,16 +1,19 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
+from datetime import datetime
 from typing import Optional
 from . import models, schemas
-from datetime import datetime
+from .auth import hash_password
 
 
-def create_advertisement(db: Session, data: schemas.AdvertisementCreate):
+# ---------- Реклама ----------
+
+def create_advertisement(db: Session, data: schemas.AdvertisementCreate, author_id: Optional[int] = None):
     ad = models.Advertisement(
         title=data.title,
         description=data.description,
         price=data.price,
-        author=data.author
+        author=data.author,
+        author_id=author_id,
     )
     db.add(ad)
     db.commit()
@@ -19,9 +22,7 @@ def create_advertisement(db: Session, data: schemas.AdvertisementCreate):
 
 
 def get_advertisement(db: Session, ad_id: int):
-    return db.query(models.Advertisement).filter(
-        models.Advertisement.id == ad_id
-    ).first()
+    return db.query(models.Advertisement).filter(models.Advertisement.id == ad_id).first()
 
 
 def get_advertisements(
@@ -34,7 +35,6 @@ def get_advertisements(
     created_from: Optional[datetime] = None,
     created_to: Optional[datetime] = None,
 ):
-    """Поиск объявлений по полям"""
     query = db.query(models.Advertisement)
 
     if title:
@@ -55,20 +55,12 @@ def get_advertisements(
     return query.order_by(models.Advertisement.created_at.desc()).all()
 
 
-def update_advertisement(
-    db: Session,
-    ad_id: int,
-    data: schemas.AdvertisementUpdate
-):
-    """PATCH — обновление только переданных полей"""
+def update_advertisement(db: Session, ad_id: int, data: schemas.AdvertisementUpdate):
     ad = get_advertisement(db, ad_id)
     if not ad:
         return None
-
-    update_data = data.model_dump(exclude_unset=True)
-    for field, value in update_data.items():
+    for field, value in data.model_dump(exclude_unset=True).items():
         setattr(ad, field, value)
-
     db.commit()
     db.refresh(ad)
     return ad
@@ -79,5 +71,53 @@ def delete_advertisement(db: Session, ad_id: int):
     if not ad:
         return False
     db.delete(ad)
+    db.commit()
+    return True
+
+
+# ---------- Пользователь ----------
+
+def get_user(db: Session, user_id: int):
+    return db.query(models.User).filter(models.User.id == user_id).first()
+
+
+def get_user_by_username(db: Session, username: str):
+    return db.query(models.User).filter(models.User.username == username).first()
+
+
+def create_user(db: Session, data: schemas.UserCreate):
+    user = models.User(
+        username=data.username,
+        password_hash=hash_password(data.password),
+        group=data.group,
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+def update_user(db: Session, user_id: int, data: schemas.UserUpdate):
+    user = get_user(db, user_id)
+    if not user:
+        return None
+
+    update_data = data.model_dump(exclude_unset=True)
+
+    if 'password' in update_data:
+        user.password_hash = hash_password(update_data.pop('password'))
+    for field, value in update_data.items():
+        setattr(user, field, value)
+
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+def delete_user(db: Session, user_id: int):
+    user = get_user(db, user_id)
+    if not user:
+        return False
+    db.delete(user)
     db.commit()
     return True
