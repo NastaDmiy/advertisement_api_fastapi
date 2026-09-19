@@ -43,8 +43,11 @@ def create_user(data: schemas.UserCreate, db: Session = Depends(get_db)):
 
 
 @app.get('/user', response_model=List[schemas.UserResponse], tags=['user'])
-def get_users(db: Session = Depends(get_db)):
-    """Список всех пользователей. Доступно без авторизации (по заданию)."""
+def get_users(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_admin),
+):
+    """Список всех пользователей. Только для admin."""
     return db.query(models.User).all()
 
 
